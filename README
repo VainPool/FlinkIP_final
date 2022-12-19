@@ -1,0 +1,48 @@
+This project uses Flink to implement TPC-H 5th query by algorithm described in the thesis(https://www.cs.utah.edu/~lifeifei/papers/cquirrel-vldb21.pdf)
+to check if the query result is the same as RDBMS(MySQL) result.
+------------------------------------------------------------------
+Preparation:
+
+1. The source data files are generated using TPC-H dbgen tools. Generated files should be placed under "/input" directory.(or user can modify the main function code to read from specified directory)
+2. If you want to execute /streamComputation/StreamDataApiForCheck, please ensure you have prepared a MySQL DB and corresponding user/configuration
+for data importing for MySQL.
+
+------------------------------------------------------------------
+Execution:
+
+There are three main functions in streamComputation package:
+1. StreamSQLAPI uses Flink table API to query, result will be printed for every matched record.
+2. StreamDataAPI uses self-defined process function to query, result will be printed for every matched record.
+3. StreamDataApiForCheck do preprocess to evenly group all data into 4 groups, shuffled the data and combined them into one single file.
+
+All filter conditions can be manually set in each main functions by changing corresponding variants values.
+
+StreamDataAPI accept absolute data file path as input. The default value for the file path is "input/", which is the corresponding
+directory under this project.
+
+Two input is required for StreamDataApiForCheck execution: stop place and whether to do preprocess
+1) Stop place(25%, 50%, 75% or 100%) controls the datasource reading progress. Datasource will stop reading at stop place for user to check
+if results match with RDBMS results at specific percentage.
+2) Whether to do preprocess(Y or N) controls the preprocess execution.
+User should set it to "Y" if executed for the first time or want to do re-shuffle and check for different shuffled results.
+User should set it to "N" if want to compare results with RDBMS for same shuffle but different stop place(percentage of data).
+
+-------------------------------------------------------------------
+MySQL Checking:
+
+1. The preprocess will import all data to MySQL with percentage tag with column name "perc".
+2. "perc" column evenly tagged data in all table for 4 groups:
+0-25% data: 0
+25%-50% data: 1
+50%-75% data: 2
+75%-100% data: 3
+3. User can check corresponding percentage of data by adding where clause for every table(for example for 75% data add where perc < 3)
+
+--------------------------------------------------------------------
+Attention:
+1. The where clause parameter in query can be manually set by modifying "inputDate" and "selectedRegion".
+2. Preprocess in StreamDataApiForCheck will read all files into RAM. It is not suggested to execute it for large files.
+3. StreamDataApiForCheck is programmed for testing in virtual flink environment in JVM. It is not suggested to execute it on cluster mode.
+4. Import to MySQL can be slow. Please wait until all data files are imported to MySQL. For the same reason, it is not suggested to test with
+large set of data.
+5. When execute on cluster, please modify the source table directory accordingly.
